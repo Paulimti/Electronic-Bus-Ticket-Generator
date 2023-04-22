@@ -1,0 +1,333 @@
+#include <stdio.h>
+#include <string.h>
+
+// Define a structure for bus details
+struct Bus {
+    int bus_number;
+    char bus_name[50];
+    char route[50];
+    float fare;
+    int total_seats;
+    int available_seats;
+};
+
+void display_buses();
+void add_bus();
+void book_seat();
+void cancel_seat();
+void delete_bus();
+void update_bus();
+void flush_stdin() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+int main() {
+    int choice;
+
+    // Loop until the user chooses to exit
+    while (1) {
+        printf("\nElectronic Bus Ticket Generator\n");
+        printf("1. Display available buses\n");
+        printf("2. Add a new bus\n");
+        printf("3. Book a seat\n");
+        printf("4. Cancel a seat\n");
+        printf("5. Delete a bus\n");
+        printf("6. Update a bus\n");
+        printf("0. Exit\n");
+        printf("Enter your choice: ");
+
+        // Get the user's choice
+        scanf("%d", &choice);
+        flush_stdin();
+
+        // Perform the corresponding action based on the user's choice
+        switch (choice) {
+            case 1:
+                display_buses();
+                break;
+            case 2:
+                add_bus();
+                break;
+            case 3:
+                book_seat();
+                break;
+            case 4:
+                cancel_seat();
+                break;
+            case 5:
+                delete_bus();
+                break;
+            case 6:
+                update_bus();
+                break;
+            case 0:
+                printf("Thank you for using Electronic Bus Ticket Generator!\n");
+                return 0;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    }
+}
+// Function to display all available buses for a given route
+void display_buses() {
+    char route[50];
+    int num_buses = 0;
+    struct Bus bus;
+
+    FILE *fptr;
+
+    printf("\nEnter the route for which you want to see the available buses: ");
+    scanf("%s", route);
+
+    // Open the data file for reading
+    fptr = fopen("buses.txt", "rb");
+
+    // Print the header
+    printf("\n%-10s %-20s %-15s %-10s %-10s\n", "Bus No.", "Bus Name", "Route", "Fare", "Available");
+
+    // Read bus data from the file and print information for matching routes
+    while (fread(&bus, sizeof(struct Bus), 1, fptr) == 1) {
+        if (strcmp(bus.route, route) == 0) {
+            printf("%-10d %-20s %-15s %-10.2f %-10d\n", bus.bus_number, bus.bus_name, bus.route, bus.fare, bus.available_seats);
+            num_buses++;
+        }
+    }
+
+    // If no matching buses were found
+    if (num_buses == 0) {
+        printf("No buses available for the route %s\n", route);
+    }
+
+    // Close the file
+    fclose(fptr);
+}
+
+// Function to add a new bus to the database
+void add_bus() {
+    FILE *fptr;
+    struct Bus bus;
+    // Open file in append mode
+    fptr = fopen("buses.txt", "ab");
+    // Get bus details from the user
+    printf("\nEnter the details of the new bus:\n");
+    printf("Bus number: ");
+    scanf("%d", &bus.bus_number);
+    flush_stdin();
+    printf("Bus name: ");
+    scanf("%s", bus.bus_name);
+    printf("Route: ");
+    scanf("%s", bus.route);
+    printf("Fare: ");
+    scanf("%f", &bus.fare);
+    printf("Total seats: ");
+    scanf("%d", &bus.total_seats);
+    bus.available_seats = bus.total_seats;
+    fwrite(&bus, sizeof(struct Bus), 1, fptr);
+
+
+    // Close file
+    fclose(fptr);
+
+    printf("New bus added successfully!\n");
+}
+// Function to book a seat on a bus
+void book_seat() {
+    int bus_number, num_seats, found = 0;
+    struct Bus bus;
+    FILE *fptr;
+    // Get the bus number and number of seats from the user
+    printf("\nEnter the bus number: ");
+    scanf("%d", &bus_number);
+    printf("Enter the number of seats you want to book: ");
+    scanf("%d", &num_seats);
+    flush_stdin();
+
+// Open the data file for updating
+    fptr = fopen("buses.txt", "rb+");
+
+// Find the bus with the given number and update its available seats
+    while (fread(&bus, sizeof(struct Bus), 1, fptr) == 1) {
+        if (bus.bus_number == bus_number) {
+            if (bus.available_seats >= num_seats) {
+                bus.available_seats -= num_seats;
+                fseek(fptr, -sizeof(struct Bus), SEEK_CUR);
+                fwrite(&bus, sizeof(struct Bus), 1, fptr);
+                found = 1;
+                printf("%d seats were booked successfully!\n",num_seats);
+                break;
+            } else {
+                printf("Sorry, only %d seats are available on this bus.\n", bus.available_seats);
+                found = 1;
+                break;
+            }
+        }
+    }
+
+// If the bus was not found
+    if (!found) {
+        printf("Bus with number %d not found.\n", bus_number);
+    }
+
+// Close the file
+    fclose(fptr);
+}
+// Function to cancel a seat on a bus
+void cancel_seat() {
+    int bus_number, num_seats, found = 0;
+    struct Bus bus;
+    FILE *fptr;
+    // Get the bus number and number of seats from the user
+    printf("\nEnter the bus number: ");
+    scanf("%d", &bus_number);
+    printf("Enter the number of seats you want to cancel: ");
+    scanf("%d", &num_seats);
+    flush_stdin();
+
+// Open the data file for updating
+    fptr = fopen("buses.txt", "rb+");
+
+// Find the bus with the given number and update its available seats
+    while (fread(&bus, sizeof(struct Bus), 1, fptr) == 1) {
+        if (bus.bus_number == bus_number) {
+            if((num_seats + bus.available_seats)<=bus.total_seats){
+            bus.available_seats += num_seats;
+            fseek(fptr, -sizeof(struct Bus), SEEK_CUR);
+            fwrite(&bus, sizeof(struct Bus), 1, fptr);
+            printf("%d seats were cancelled successfully!\n",num_seats);
+            break;
+        }
+            else{
+                printf("\nNumber of seats to cancel exceeded booked seats.\n");
+            }
+            found = 1;
+        }
+    }
+
+// If the bus was not found
+    if (!found) {
+        printf("Bus with number %d not found.\n", bus_number);
+    }
+
+// Close the file
+    fclose(fptr);
+}
+// Function to delete a bus from the database
+void delete_bus() {
+    int bus_number, found = 0;
+    struct Bus bus;
+    FILE *fptr1, *fptr2;
+    // Get the bus number
+    printf("\nEnter the bus number: ");
+    scanf("%d", &bus_number);
+    flush_stdin();
+
+// Open the input file in read mode and the output file in write mode
+    fptr1 = fopen("buses.txt", "rb");
+    fptr2 = fopen("temp.txt", "wb");
+
+// Copy all buses except the one with the given number to the output file
+    while (fread(&bus, sizeof(struct Bus), 1, fptr1) == 1) {
+        if (bus.bus_number != bus_number) {
+            fwrite(&bus, sizeof(struct Bus), 1, fptr2);
+        } else {
+            found = 1;
+        }
+    }
+
+// Close the files
+    fclose(fptr1);
+    fclose(fptr2);
+
+// If the bus was not found
+    if (!found) {
+        printf("Bus with number %d not found.\n", bus_number);
+        remove("temp.txt");
+        return;
+    }
+
+// Delete the input file and rename the output file to the same name as the input file
+    remove("buses.txt");
+    rename("temp.txt", "buses.txt");
+
+    printf("Bus with number %d deleted successfully!\n", bus_number);
+}
+// Function to update the details of a bus in the database
+void update_bus() {
+    int bus_number, found = 0, choice;
+    struct Bus bus;
+    FILE *fptr;
+    // Get the bus number from the user
+    printf("\nEnter the bus number: ");
+    scanf("%d", &bus_number);
+    flush_stdin();
+
+// Open the data file for updating
+    fptr = fopen("buses.txt", "rb+");
+
+// Find the bus with the given number and update its details
+    while (fread(&bus, sizeof(struct Bus), 1, fptr) == 1) {
+        if (bus.bus_number == bus_number) {
+            found = 1;
+
+            // Display the bus details and ask the user which field to update
+            printf("\nCurrent details:\n");
+            printf("Bus number: %d\n", bus.bus_number);
+            printf("Route: %s\n", bus.route);
+            printf("Fare: %.2f\n", bus.fare);
+            printf("Total seats: %d\n", bus.total_seats);
+            printf("Available seats: %d\n", bus.available_seats);
+            printf("\nWhich field do you want to update?\n");
+            printf("1. Route\n");
+            printf("2. Fare\n");
+            printf("3. Total seats\n");
+            printf("4. Available seats\n");
+            printf("Enter your choice: ");
+            scanf("%d", &choice);
+            flush_stdin();
+
+            // Update the chosen field
+            switch (choice) {
+                case 1:
+                    printf("New route: ");
+                    fgets(bus.route, 50, stdin);
+                    break;
+                case 2:
+                    printf("New fare: ");
+                    scanf("%f", &bus.fare);
+                    flush_stdin();
+                    break;
+                case 3:
+                    printf("New total seats: ");
+                    scanf("%d", &bus.total_seats);
+                    flush_stdin();
+                    break;
+                case 4:
+                    printf("New available seats: ");
+                    scanf("%d", &bus.available_seats);
+                    flush_stdin();
+                    break;
+                default:
+                    printf("Invalid choice.\n");
+                    break;
+            }
+
+            // Write the updated bus details to the file
+            fseek(fptr, -sizeof(struct Bus), SEEK_CUR);
+            fwrite(&bus, sizeof(struct Bus), 1, fptr);
+
+            break;
+        }
+    }
+
+// Close the file
+    fclose(fptr);
+
+// If the bus was not found
+    if (!found) {
+        printf("Bus with number %d not found.\n", bus_number);
+        return;
+    }
+
+    printf("Bus with number %d updated successfully!\n", bus_number);
+}
+
